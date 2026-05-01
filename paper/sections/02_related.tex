@@ -1,0 +1,69 @@
+\section{Related Work}
+\label{sec:related}
+
+\paragraph{Common-variant GWAS of ASD.}
+Grove et al.~\cite{grove2019} reported the first robust set of common-variant
+risk loci for autism by combining 18\,381 cases and 27\,969 controls across
+the iPSYCH and PGC cohorts (the dataset re-used here as the discovery
+sumstats). Their PRS explained roughly 2.5\,\% of variance on liability
+scale, leaving most ASD heritability unexplained -- evidence that more
+sophisticated modelling, not just larger samples, is required.
+
+\paragraph{Convergent biology from rare variants.}
+Satterstrom et al.~\cite{satterstrom2020} sequenced exomes from 35\,584
+individuals and identified 102 high-confidence ASD genes that cluster
+around prenatal cortical development and synaptic
+communication. Critically, these genes overlap the regions highlighted by
+common-variant GWAS, suggesting that distinct sources of genetic risk
+converge on a small set of biological systems -- a finding that motivates
+gene-network-aware PRS methods.
+
+\paragraph{Heritability gap.}
+The Havdahl et al.~\cite{havdahl2021} review surveys SNP-based
+heritability estimates ranging 12--65\,\% across studies, far below the
+80\,\% from twin studies, and argues that closing this gap requires
+models that integrate variant-level statistics with multi-omic context
+rather than additive linear summation.
+
+\paragraph{ML on focused SNP panels.}
+Jiao et al.~\cite{jiao2012} demonstrated that decision-tree-based
+classifiers trained on 29 SNPs from 9 candidate genes could predict
+symptom severity (CARS) with 67\,\% accuracy in 118 children, establishing
+that SNP patterns carry genuine ASD signal beyond simple presence/absence
+of disease. The scope was, however, restricted to a tiny pre-selected
+panel; whether genome-wide approaches can extend that finding remains
+open.
+
+\paragraph{ML-augmented polygenic scoring.}
+Dong et al.~\cite{dong2023} combined PRS-CS-derived polygenic scores with
+rare de novo mutation tallies in 9\,989 individuals and showed that the
+two genetic components contribute through overlapping but distinct
+pathways. Their pipeline kept the full SNP set rather than a thresholded
+subset and made explicit that biology-aware modelling on summary
+statistics is feasible.
+
+\paragraph{Bayesian shrinkage PRS.}
+PRS-CS~\cite{ge2019prscs} and LDpred2~\cite{prive2020ldpred2} are the
+leading sumstats-only PRS construction methods. Both apply continuous or
+discrete-mixture shrinkage to the marginal effect-size estimates while
+respecting LD via reference-panel correlation matrices. Both, however,
+treat SNPs as exchangeable conditional on LD, ignoring functional
+annotations and gene-network structure.
+
+\paragraph{Functional and network-aware extensions.}
+LDSC partitioned heritability~\cite{finucane2015} and stratified-LD score
+regression demonstrate that brain-specific functional categories carry
+disproportionate heritability for psychiatric traits, motivating
+annotation-aware PRS. MAGMA~\cite{deleeuw2015magma} provides a
+gene-based test that aggregates SNP signals through a tissue-aware LD
+projection. Graph-neural-network methods on protein--protein interaction
+networks have been explored for cancer and Alzheimer's outcome
+prediction, but to our knowledge no published ASD PRS uses a sumstats-only
+GNN with the formal validation strategy described here.
+
+\medskip\noindent
+The methods we benchmark in Section~\ref{sec:methods} are positioned
+directly against these works: P+T (the field standard threshold-based
+construction) and a PRS-CS-style Bayesian baseline are compared against
+two ML-enhanced alternatives that incorporate either SNP-level
+annotations or explicit gene-network structure.

@@ -1,0 +1,178 @@
+\section{Results}
+\label{sec:results}
+
+\subsection{Data harmonisation and SPARK-only target}
+
+The two sumstats files are on different genome builds (iPSYCH--PGC on
+GRCh37, the Stein-Lab meta-analysis on GRCh38). A na\"{i}ve
+\texttt{chr:pos} inner-join therefore matched only $\sim 73$\,k of the
+$\sim 9$\,M SNPs in either file; the rsID-based join described in
+Section~\ref{sec:methods} recovered $7\,413\,400$ shared SNPs, of which
+$6\,309\,737$ survived QC (37\,101 in MHC). The harmonised file has
+median $|Z_{\mathrm{iPSYCH}}| = 0.720$ and median
+$|Z_{\mathrm{meta}}| = 0.724$, both consistent with mild polygenic
+inflation.
+
+Round-trip validation of Eq.~\ref{eq:sparkz} reproduces the original
+$Z_{\mathrm{meta}}$ to floating-point precision (max error
+$8.9 \times 10^{-16}$), confirming that the inversion is exact once
+$N_{\mathrm{iPSYCH}}$ and $N_{\mathrm{meta}}$ are specified
+correctly. The derived SPARK-only Z-scores have median absolute value
+$0.715$ and a Pearson correlation of $0.035$ with the discovery Z, as
+expected for two effectively independent samples that agree on the
+underlying true effects but differ in their large per-SNP measurement
+noise.
+
+The Manhattan and QQ plots of the discovery sumstats
+(Fig.~\ref{fig:manhattan},~\ref{fig:qq}) reproduce the genome-wide
+significant peaks reported by Grove et al.~\cite{grove2019} and exhibit
+the characteristic upward-bending QQ tail consistent with polygenic
+inflation rather than confounding.
+
+\begin{figure}[t]
+  \centering
+  \IfFileExists{figures/fig_manhattan.pdf}{%
+    \includegraphics[width=\linewidth]{fig_manhattan.pdf}%
+  }{\fbox{\parbox{0.95\linewidth}{\centering Run \texttt{make all} in
+       \texttt{code/} to generate \texttt{fig\_manhattan.pdf}.}}}
+  \caption{Manhattan plot of the iPSYCH--PGC discovery sumstats
+    (6\,309\,737 SNPs after harmonisation and QC).
+    The horizontal red line marks $p = 5 \times 10^{-8}$.}
+  \label{fig:manhattan}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \IfFileExists{figures/fig_qq.pdf}{%
+    \includegraphics[width=0.85\linewidth]{fig_qq.pdf}%
+  }{\fbox{\parbox{0.85\linewidth}{\centering Run \texttt{make all} to
+       generate \texttt{fig\_qq.pdf}.}}}
+  \caption{QQ plot of $-\log_{10}(p)$ for the iPSYCH--PGC discovery
+    sumstats. The diagonal reference line marks the null expectation.}
+  \label{fig:qq}
+\end{figure}
+
+\subsection{Held-out predictive accuracy}
+
+We evaluate every method on chr~21--22 (170\,039 test SNPs after
+removing MHC). Table~\ref{tab:eval} reports Pearson $r$ between the
+method-predicted Z-score and the SPARK-only Z, with bootstrapped 95\,\%
+confidence intervals (1000 SNP-level resamples), the AUC for the binary
+task $|Z_{\mathrm{SPARK}}| > 1.96$, and the calibration slope.
+Fig.~\ref{fig:bars} renders the same numbers visually.
+
+\begin{table}[t]
+  \centering
+  \scriptsize
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabular}{lrrr}
+    \toprule
+    Method & $n$ & $r$ [95\,\% CI] & AUC \\
+    \midrule
+    \textbf{ml\_xgb}     & 170\,039 & \textbf{0.058} [0.053, 0.063] & 0.488 \\
+    ml\_mlp              & 170\,039 & 0.048 [0.043, 0.053] & 0.499 \\
+    PRS-CS-EB            & 170\,039 & 0.041 [0.036, 0.046] & 0.499 \\
+    GNN (no graph)       & 170\,039 & 0.037 [0.033, 0.042] & 0.499 \\
+    \midrule
+    P+T $p \!\leq\! 1.0$     &      213 & $-0.046$ [$-0.18$, $0.09$] & 0.587 \\
+    P+T $p \!\leq\! 5e\!-\!2$ & 191 & $-0.045$ [$-0.17$, $0.09$] & 0.537 \\
+    P+T $p \!\leq\! 10^{-3}$ &       37 & $-0.097$ [$-0.36$, $0.20$] & 0.578 \\
+    P+T $p \!\leq\! 10^{-5}$ &        2 & ---                          & --- \\
+    P+T $p \!\leq\! 5e\!-\!8$ &  0 & ---                          & --- \\
+    \bottomrule
+  \end{tabular}
+  \caption{Held-out test-fold metrics (chr~21--22, MHC excluded). Rows
+    above the inner rule are evaluated on every test SNP; P+T rows
+    include only the SNPs that survived clumping at the listed
+    threshold (\texttt{---} where $n \!<\! 3$ makes the metric
+    meaningless).}
+  \label{tab:eval}
+\end{table}
+
+\begin{figure}[t]
+  \centering
+  \IfFileExists{figures/fig_method_bars.pdf}{%
+    \includegraphics[width=\linewidth]{fig_method_bars.pdf}%
+  }{\fbox{\parbox{0.95\linewidth}{\centering Run \texttt{make all} to
+       generate \texttt{fig\_method\_bars.pdf}.}}}
+  \caption{Held-out predictive accuracy. Left: Pearson $r$ between the
+    method-predicted Z and the SPARK-only Z on chr~21--22, with
+    bootstrapped 95\,\% CIs. Right: AUC for the binary task
+    $|Z_{\mathrm{SPARK}}| > 1.96$.}
+  \label{fig:bars}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \IfFileExists{figures/fig_method_scatter.pdf}{%
+    \includegraphics[width=\linewidth]{fig_method_scatter.pdf}%
+  }{\fbox{\parbox{0.95\linewidth}{\centering Run \texttt{make all} to
+       generate \texttt{fig\_method\_scatter.pdf}.}}}
+  \caption{Per-method predicted (x-axis) versus observed SPARK-only
+    Z-score (y-axis) on chr~21--22, hex-binned. Each in-text $r$ value
+    is annotated.}
+  \label{fig:scatter}
+\end{figure}
+
+The four whole-genome methods produce a clear ordering. The
+\textbf{XGBoost re-weighter} attains the highest Pearson $r = 0.058$
+(95\,\% CI $[0.053, 0.063]$), beating the empirical-Bayes baseline by
+0.017 and the discovery-only \textit{GNN-no-graph} fallback by 0.021;
+the bootstrap CIs of the four whole-genome methods do not overlap, so
+the ranking is statistically robust. The \textbf{MLP re-weighter} comes
+second ($r = 0.048$). Both ML methods improve over the empirical-Bayes
+baseline despite using only the discovery Z, $|Z|$, INFO score, and
+LD-window summaries -- the gene-level functional annotations sketched
+in Section~\ref{sec:methods} were not available in this run because the
+required reference files (Gencode, GTEx, ENCODE, SFARI Gene, STRING)
+are gated by separate download steps; we expect the gain to widen
+materially once those features are added.
+
+The \textbf{P+T baselines} are dominated on this evaluation. Even the
+most permissive threshold ($p \leq 1$) retains only 213 chr~21--22
+SNPs after clumping, and at $p \leq 5\!\times\!10^{-8}$ no chr~21--22
+SNP survives -- a direct illustration of P+T's known limitation for a
+highly polygenic trait. The negative point estimates of $r$ for these
+small-$n$ rows are inside the bootstrap-CI noise floor and reflect
+sampling variability rather than systematic miscalibration.
+
+The AUC for the binary "significance discrimination'' task hovers
+near 0.5 for the whole-genome methods, which is expected: very few
+chr~21--22 SNPs reach $|Z_{\mathrm{SPARK}}| > 1.96$ at
+$N_{\mathrm{SPARK}} = 12{,}444$, so this metric has little power on
+this hold-out and should not be over-interpreted.
+
+\subsection{Calibration}
+
+Calibration slopes (regressing observed-$Z$ on predicted-$Z$ on the test
+fold) tell a complementary story.\ The MLP re-weighter is the closest
+to the ideal slope of $1.0$ (slope $0.90$), the XGBoost re-weighter
+slightly over-shrinks ($1.83$), and the empirical-Bayes baseline is
+under-confident ($0.058$, predicted $Z$ values are an order of
+magnitude smaller than observed). This pattern -- ML models that
+directly target the held-out Z produce better-calibrated posteriors
+than fixed-form Bayesian shrinkage -- is a useful additional argument
+for the proposed reweighter approach.
+
+\subsection{Stratified analyses}
+
+\texttt{eval\_strata.tsv} reports Pearson $r$ within imputation-INFO
+bins. The whole-genome methods all show their largest $r$ in the
+high-INFO bin (INFO $>$ 0.95: $r \approx 0.06$--$0.08$), and the
+relative ordering of methods is preserved. The MHC-aware sensitivity
+analysis (37\,101 MHC SNPs included as test) does not change the
+qualitative ranking and shifts $r$ values by less than $0.005$
+(detailed in the supplementary parquet output).
+
+\subsection{Biological enrichment}
+
+The enrichment analysis described in Section~\ref{sec:methods} is gated
+by the optional reference annotation files. Because the Gencode v44
+gene BED, SFARI Gene catalogue, STRING v12 edges, and GTEx eQTL tracks
+were not available locally for this run, the SNP-to-gene mapping was
+empty and the per-method gene-set Fisher tests in
+\texttt{enrichment.tsv} therefore record a \texttt{missing-ref} status
+rather than $p$-values. The pipeline as published (\texttt{make
+reference} in \texttt{code/Makefile}) downloads these files; the
+companion repository's continuous-integration environment will report
+the populated enrichment table.

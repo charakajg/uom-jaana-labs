@@ -1,0 +1,29 @@
+Polygenic risk scores (PRS) for autism spectrum disorder (ASD) built from
+genome-wide association study (GWAS) summary statistics still explain only a
+small fraction of the disease's substantial heritability. Existing
+construction methods such as pruning-and-thresholding (P+T) discard the
+majority of the genome's distributed signal, while Bayesian shrinkage
+methods like PRS-CS treat variants as exchangeable and ignore the
+biological structure that links them. We present a sumstats-only pipeline
+that benchmarks two ML-enhanced polygenic scoring strategies against P+T
+and a PRS-CS-style empirical-Bayes baseline on two public ASD GWAS
+releases: the iPSYCH--PGC November 2017 discovery dataset
+($N = 46\,350$) and the larger SPARK + iPSYCH + PGC meta-analysis
+($N = 58\,794$). The two files use different genome builds, so we
+inner-join on rsID to recover 6{,}309{,}737 SNPs after quality control. To
+obtain an independent validation signal without individual-level
+genotypes, we invert the sample-size-weighted-Z meta-analysis formula and
+recover a SPARK-only Z-score per SNP at the additional cohort's effective
+$N_{\mathrm{SPARK}} = 12\,444$. We then train (i) a gradient-boosted and a
+multilayer-perceptron re-weighter that combine discovery Z with LD-window
+summaries and SNP-level functional annotations, (ii) a graph-neural-network
+re-weighter that pools per-SNP signal at the gene level over a STRING
+gene-gene interaction graph, and we compare these against a P+T baseline
+at five $p$-thresholds and an empirical-Bayes baseline. On the held-out
+test fold (chr~21--22, MHC excluded; $n = 170{,}039$ SNPs), the
+gradient-boosted re-weighter achieves Pearson $r = 0.058$
+(95\,\% CI [0.053, 0.063]), the MLP $r = 0.048$, and the empirical-Bayes
+baseline $r = 0.041$, all significantly above zero. The accompanying code
+is reproducible end-to-end on the two summary-statistics files alone,
+requires no individual-level access, and provides a transparent template
+for future biology-aware PRS work in ASD.

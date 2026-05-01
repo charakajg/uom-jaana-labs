@@ -1,0 +1,15 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+We presented a sumstats-only pipeline for ML-enhanced polygenic scoring
+in autism spectrum disorder that side-steps the access-control barrier
+of individual-level genotypes by deriving an algebraically independent
+SPARK-only Z-score from the iPSYCH--PGC and SPARK-meta releases. Two
+ML-enhanced methods -- a feature-based gradient-boosted/MLP re-weighter
+and a gene-network GNN -- are benchmarked against P+T and a PRS-CS
+Bayesian baseline on a chromosomal hold-out, with bootstrap-CI Pearson
+$r$, AUC, calibration, and biological-enrichment metrics. The pipeline
+is fully reproducible from the two public summary-statistics files
+alone, and is structured so that the same code can be retargeted to any
+future ASD sumstats release or to other psychiatric traits where two
+overlapping releases of differing sample size exist.

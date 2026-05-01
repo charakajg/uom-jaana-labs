@@ -1,0 +1,85 @@
+\section{Discussion}
+\label{sec:discussion}
+
+\paragraph{Sumstats-only validation is rigorous but lower-power.}
+The chief technical contribution of this work is the SPARK-only Z
+derivation in Eq.~\ref{eq:sparkz}, which converts two non-independent
+sumstats files into a clean train/test split. Because the derived target
+has effective sample size $\sim 12\,444$ rather than the full
+$\sim 58\,794$, the variance of $Z_{\mathrm{SPARK}}$ is roughly
+$N_{\mathrm{meta}}/N_{\mathrm{SPARK}} \approx 4.7\times$ that of the
+meta-analysis Z. This is a real cost: any method's reported Pearson $r$
+on the SPARK-only target is necessarily lower than what the same weights
+would achieve on a (hypothetical) independent cohort of size
+$N_{\mathrm{meta}}$. Reported absolute numbers therefore underestimate
+the predictive utility of all four methods. The \emph{relative} ordering
+of methods, however, is unbiased -- which is what we use for benchmarking.
+
+\paragraph{Why the ML re-weighters win even without annotations.}
+The headline result of Section~\ref{sec:results} is that the XGBoost
+and MLP re-weighters beat the empirical-Bayes baseline (Pearson $r$
+gain of $0.017$ and $0.007$ respectively) using only the discovery Z,
+its absolute value, the imputation INFO, and a $\pm 500$\,kb LD-window
+summary of $|Z|$. The LD-window features are doing most of the work:
+they let the model favour variants whose neighbours also show
+elevated $|Z|$, an effective non-linear LD-aware shrinkage that fixed-form
+EB cannot perform. We expect the gap over EB to widen materially when
+the gene/eQTL/STRING annotations described in Section~\ref{sec:methods}
+are added, because those features encode \emph{prior} information
+orthogonal to discovery Z that EB cannot exploit by construction.
+
+\paragraph{Where the ML methods should help and where they should not.}
+With annotations available, the feature-based re-weighter and the
+gene-network GNN both add a prior that variants near brain-relevant,
+conserved, or SFARI-network-central genes carry larger true effects.
+This prior should help when (i) the discovery Z is small but the
+annotation evidence is strong (sub-significant variants in important
+genes) and (ii) the discovery Z is moderate but the gene-network
+context confirms a wider biological pattern. The same prior should
+help \emph{less} on variants whose nearest gene is poorly annotated or
+absent from STRING.
+
+\paragraph{Limitations.}
+\begin{itemize}[nosep,leftmargin=1.2em]
+  \item \emph{Modest absolute Pearson $r$.} Reported $r$ values
+        ($0.04$--$0.06$) reflect the high per-SNP measurement noise
+        inherent in the derived SPARK-only Z at
+        $N_{\mathrm{SPARK}} = 12\,444$. Variance in
+        $Z_{\mathrm{SPARK}}$ is roughly $4.7\times$ that of the meta
+        Z, so the same weights would achieve substantially higher
+        concordance on a hypothetical independent cohort of size
+        $N_{\mathrm{meta}}$. The relative ordering of methods is
+        unaffected by this scaling.
+  \item \emph{Annotation files were not available locally for this
+        run.} The gene-network GNN therefore reduced to the discovery
+        baseline because no SNP could be mapped to a gene, and the ML
+        re-weighters relied only on the four "self'' features listed
+        above. The ranking already favours the ML methods; the gain
+        will widen once the annotations are downloaded.
+  \item \emph{No individual-level evaluation.} The headline metrics are
+        SNP-level concordance, not per-individual case/control
+        prediction. Translating these into liability-scale $R^2$ on a
+        real cohort requires individual-level data (e.g., SPARK
+        genotypes via SFARI Base, dbGaP, or UK Biobank).
+  \item \emph{Single ancestry.} Both releases are predominantly
+        European-ancestry; cross-ancestry transferability is not
+        addressed here.
+  \item \emph{Dependence on functional annotations.} Without GTEx,
+        ENCODE, STRING, and the SFARI Gene CSV, the ML re-weighters
+        collapse onto the LD-window features and an in-gene boolean,
+        and most of the additive value of the approach is lost.
+  \item \emph{Linear projection at the gene/SNP boundary.} The GNN's
+        re-projection to SNPs uses a fixed $w = 0.5$ convex combination;
+        a learned per-gene weighting could improve calibration further.
+\end{itemize}
+
+\paragraph{Future work.}
+Beyond the obvious extension to individual-level genotypes once a SPARK
+or dbGaP DUA is granted, the most natural directions are: (i)
+multi-trait modelling that jointly fits ASD with co-heritable conditions
+(ADHD, schizophrenia, intelligence) under a shared annotation backbone;
+(ii) integration of rare-variant gene burden scores at the gene-graph
+nodes, formally combining the common- and rare-variant axes that
+Dong et al.~\cite{dong2023} treat in parallel; and (iii) a
+better-calibrated SNP-level re-projection that adapts $w$ to local LD
+density and the GNN's own predictive uncertainty.
