@@ -1,0 +1,159 @@
+\section{Method}
+\label{sec:method}
+
+\subsection{Pivot from the proposal}
+\label{sec:pivot}
+
+The original proposal assumed access to individual-level SPARK
+genotypes, which would have allowed direct supervised training of a
+gene-network deep learning model on per-individual case/control
+labels. The two datasets that are publicly accessible without an IRB
+review, however, are both \emph{summary statistics} (per-SNP effect
+sizes and standard errors aggregated over all individuals): the
+iPSYCH--PGC ASD November 2017 release and the Stein-Lab SPARK + iPSYCH
++ PGC meta-analysis. Individual-level SPARK genotypes are gated by
+SFARI Base / dbGaP committee approval, which is incompatible with a
+short coursework timeline.
+
+We therefore reformulated the methodology as a \emph{sumstats-only}
+pipeline that retains the spirit of the proposal -- improve PRS by
+moving beyond independent additive scoring -- while operating purely
+on aggregated effect-size estimates. The pivot has three concrete
+consequences:
+
+\begin{enumerate}[nosep,leftmargin=1.4em]
+  \item We \emph{back out} an independent SPARK-only signal per SNP
+        from the meta-analysis and discovery files (see below), and
+        use that as the target for supervised learning.
+  \item Both ML re-weighters (gradient-boosted and MLP) are trained at
+        the SNP level rather than the individual level: each row is a
+        SNP, the inputs are properties of that SNP, and the target is
+        the derived SPARK-only score.
+  \item The gene-network model pools SNP-level signal at the gene
+        level over a STRING gene--gene interaction graph, then blends
+        gene-level predictions back with each SNP's discovery signal.
+\end{enumerate}
+
+The four required deliverables of the proposal -- baseline PRS, data
+preprocessing, model development, and evaluation against a baseline --
+are all preserved.
+
+\subsection{Data}
+
+We use two publicly available ASD GWAS summary-statistics releases:
+\begin{enumerate}[nosep,leftmargin=1.2em]
+  \item \textbf{iPSYCH--PGC ASD Nov.~2017}~\cite{grove2019} with about
+        46\,350 people (18\,381 cases, 27\,969 controls), reporting per
+        SNP an rsID, GRCh37 chromosome and position, the two alleles,
+        an imputation INFO score, the odds ratio, its standard error,
+        and the two-sided $p$-value.
+  \item \textbf{SPARK + iPSYCH + PGC meta-analysis}~\cite{matoba2020}
+        with about 58\,794 people, reporting per SNP a chr:pos:alleles
+        marker name, both alleles, the sample-size-weighted effect,
+        its standard error, the $p$-value, the per-cohort direction
+        string, and the total sample size.
+\end{enumerate}
+The two releases overlap by construction: the meta-analysis includes
+the iPSYCH--PGC samples plus an additional SPARK contribution of about
+12\,444 people.
+
+\subsection{Quality control and harmonisation}
+
+The two files are on different genome builds: the iPSYCH--PGC release
+uses GRCh37 coordinates, whereas the Stein-Lab meta-analysis uses
+GRCh38. A na\"{i}ve join on chromosome and position therefore matches
+only about 73\,000 of the roughly 9\,million SNPs in either file. We
+instead extract the rsID embedded in the meta-analysis
+\texttt{MarkerName} field (the trailing \texttt{rs} number after the
+final underscore) and join on rsID, keeping the iPSYCH GRCh37
+coordinates as the canonical position. This recovers about
+7.4\,million shared SNPs.
+
+Both files are streamed with \texttt{polars}. Palindromic A/T and C/G
+SNPs are removed because their alleles cannot be strand-aligned without
+per-cohort allele frequencies. We further drop imputation \texttt{INFO}
+below 0.6 and pairs with mismatched non-palindromic alleles, sign-flipping
+the meta effect when alleles are swapped. After QC we retain
+\textbf{6\,309\,737} SNPs (37\,101 in MHC). The major histocompatibility
+complex (chr~6, 25--34\,Mb GRCh37) is flagged but kept; downstream
+training scripts exclude it from the train/validation folds.
+
+\subsection{Independent SPARK-only target}
+\label{sec:sparkz}
+
+The two summary-statistics files are not statistically independent
+because the meta-analysis includes the iPSYCH samples; using one as
+training and the other as test would therefore leak information. To
+obtain an independent target without individual-level genotypes, we use
+the standard relationship between a combined meta-analysis Z-score and
+the contributing cohorts. Intuitively, the meta Z is a
+sample-size-weighted blend of the iPSYCH discovery Z and the
+additional SPARK contribution. If we know the total sample sizes for
+the meta-analysis, the iPSYCH-only analysis, and the extra SPARK
+slice, we can \emph{solve} for the SPARK-only Z at each SNP by
+subtracting the appropriately scaled iPSYCH part from the scaled meta
+part and re-scaling by the SPARK sample size. In our setting the
+iPSYCH-only analysis has 46\,350 people, the meta-analysis 58\,794, and
+the implied SPARK-only piece 12\,444.
+
+We verify this step by \emph{round-tripping}: plugging the recovered
+SPARK Z back into the same blending rule must reproduce the published
+meta Z at every SNP. In practice the maximum reconstruction error is
+below $10^{-15}$, i.e.\ numerical noise only.
+
+\subsection{Baseline 1: Pruning and Thresholding (P+T)}
+
+For each of several $p$-value cut-offs (from genome-wide significance
+down to ``keep everything''), we LD-clump the discovery sumstats with
+PLINK~1.9 (\texttt{--clump} with correlation under 0.1 in a 250\,kb
+window) using the 1000 Genomes phase~3 EUR reference panel. SNPs that
+survive clumping keep their discovery log-odds as the PRS weight; all
+other SNPs get weight zero. When PLINK or the LD reference are
+unavailable, the implementation falls back to a greedy distance-based
+prune so the pipeline still runs end-to-end.
+
+\subsection{Baseline 2: Empirical-Bayes shrinkage (PRS-CS-style)}
+
+PRS-CS~\cite{ge2019prscs} is a Bayesian method that shrinks SNP effects
+using linkage-disequilibrium structure from a reference panel. We did
+not download the full LD reference; instead we use a simple
+closed-form shrinkage that pulls each discovery effect toward zero when
+its Z-score is small, and leaves larger Z-scores more intact. This
+stands in for PRS-CS in our environment and preserves the same
+qualitative comparison against the ML methods.
+
+\subsection{Feature-based ML re-weighter}
+\label{sec:mlrew}
+
+For every harmonised SNP we build a fixed list of \textbf{14 input
+features}: the discovery Z-score and its absolute value, the imputation
+INFO score, and summaries (mean, max, count) of absolute Z in a
+$\pm 500$\,kb window around the SNP (a simple stand-in for local LD
+context). When annotation files are present, the same vector also
+includes distance to the nearest gene, SFARI flags, STRING degree,
+GTEx brain eQTL strength, ENCODE chromatin state, and conservation; in
+our run several of these were missing and were filled with zeros.
+
+The training target at each SNP is the SPARK-only Z from the previous
+subsection. We train two models with a chromosome-based split
+(Section~\ref{sec:experiments}): \textbf{XGBoost} (gradient boosting,
+depth and learning rate set for stable validation error) on the full
+training chromosomes, and a \textbf{small neural network} (two hidden
+layers of 128 and 64 units) via scikit-learn's \texttt{MLPRegressor},
+trained on a random 250\,k-row subset of training SNPs for speed. To
+turn predicted Z back into an effect size we multiply by the discovery
+standard error, as usual for Z-based regression.
+
+\subsection{Gene-network GNN re-weighter}
+\label{sec:gnn}
+
+We map each SNP to its nearest gene (within $\pm 10$\,kb of the gene
+body) and average SNP-level features within each gene. A gene graph
+comes from STRING~v12 high-confidence edges among genes that have at
+least one SNP. A two-layer graph neural network predicts the average
+SPARK-only Z per gene, then we blend each gene's prediction with that
+SNP's own discovery Z (equal 50--50 weight in the default setup). When
+the full graph library is unavailable we use a lighter Laplacian
+smoothing fallback on the same graph. In our run, missing gene
+annotation files meant no SNPs mapped to genes, so this path
+collapsed to the discovery baseline for reporting purposes.

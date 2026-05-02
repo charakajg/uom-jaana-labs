@@ -1,4 +1,4 @@
-"""Generate paper-ready figures.
+"""Generate report-ready figures.
 
 Outputs (one PDF + one PNG per figure)
 --------------------------------------

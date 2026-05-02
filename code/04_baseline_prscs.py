@@ -20,7 +20,7 @@ discovery Z-statistic alone:
     beta_post = beta_hat * Z^2 / (Z^2 + 1)
 
 This preserves the *shape* of a Bayesian shrinkage baseline so the rest of
-the pipeline runs end-to-end; the paper's headline numbers should be
+the pipeline runs end-to-end; the report's headline numbers should be
 generated with the real PRS-CS binary (see ``code/Makefile`` target
 ``reference``).
 """

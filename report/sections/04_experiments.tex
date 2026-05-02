@@ -1,0 +1,160 @@
+\section{Experiments and Data}
+\label{sec:experiments}
+
+This section documents the concrete experimental setup used to produce
+the numbers in Section~\ref{sec:results}: which data files were
+consumed, how they were partitioned, the hyper-parameter and
+reference-file decisions made for every method, the compute
+environment, and the evaluation protocol.
+
+\subsection{Data files used}
+
+The pipeline operates on the two local files in
+\code{Datasets/}:
+
+\begin{table}[h]
+  \centering
+  \small
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabular}{lrrl}
+    \toprule
+    File & Rows & Size & Build \\
+    \midrule
+    \code{iPSYCH-PGC_ASD_Nov2017.gz}    & 9\,112\,386 & 235\,MB & GRCh37 \\
+    \code{ASD_SPARK_iPSYCH_PGC.tsv}     & 8\,992\,756 & 684\,MB & GRCh38 \\
+    \bottomrule
+  \end{tabular}
+  \caption{Raw inputs to the pipeline, downloaded once into
+    \code{Datasets/} (see \code{Datasets/README.md}).}
+  \label{tab:rawdata}
+\end{table}
+
+The harmonisation stage (Section~\ref{sec:method}) joins the two files
+on rsID and applies QC, producing a single \emph{harmonised SNP table}
+of \textbf{6\,309\,737 rows} (\code{results/qc/harmonised.parquet},
+245\,MB). The Z-inversion stage adds the per-SNP independent SPARK-only
+Z (\code{results/qc/spark_only_z.parquet}, 176\,MB), and the
+feature-engineering stage adds the 14-dimensional feature vector
+(\code{results/qc/features.parquet}, 186\,MB). All downstream
+training, evaluation, and figure code reads only these three derived
+parquet files.
+
+\subsection{Train / validation / test split}
+
+To approximate independence between training and held-out samples
+without individual-level data, we use a \textbf{chromosome-fold split}:
+\begin{itemize}[nosep,leftmargin=1.2em]
+  \item \textbf{Train}: chr~1--19 ($n = 5\,959\,733$ SNPs).
+  \item \textbf{Validation}: chr~20 ($n = 142\,864$ SNPs) -- early
+        stopping and hyper-parameter checks only.
+  \item \textbf{Test}: chr~21--22 ($n = 170\,039$ SNPs) -- frozen
+        until all models are finalised.
+\end{itemize}
+The MHC region (chr~6, 25--34\,Mb GRCh37) is excluded from both
+training and validation because its long-range LD structure violates
+the independence assumptions of the SNP-level loss; a 37\,101-SNP MHC
+sensitivity table is reported as supplementary output.
+
+\subsection{Hyper-parameters and reference fallbacks}
+\label{sec:hyperparams}
+
+The full pipeline is designed to run end-to-end \textit{even when the
+optional reference downloads are absent}. Each method therefore has a
+canonical configuration plus a documented fallback, and we report
+which path was actually taken in this run.
+
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{P+T} (\code{code/03_baseline_pt.py}). Canonical:
+        PLINK~1.9 \code{--clump} ($r^2<0.1$, 250\,kb) on the 1000G
+        EUR reference. Fallback: greedy 1\,Mb distance prune. PLINK was
+        not installed; the \emph{fallback} path was used. This produces
+        five weight files at $p$-thresholds
+        $\{5\!\times\!10^{-8}, 10^{-5}, 10^{-3}, 0.05, 1.0\}$.
+  \item \textbf{PRS-CS-EB} (\code{code/04_baseline_prscs.py}).
+        Canonical: PRS-CS-auto with the 1000G EUR LD reference.
+        Fallback: a simple shrinkage rule that scales each discovery
+        effect by a factor that depends on its Z-score (stronger
+        effects are shrunk less). The 1000G LD reference (3.4\,GB) was
+        not downloaded; the \emph{fallback} path was used.
+  \item \textbf{ML-XGB} (\code{code/06_ml_reweight.py}).
+        \code{xgboost.XGBRegressor} with \code{max_depth}~6,
+        \code{learning_rate}~0.05, \code{n_estimators}~400,
+        \code{subsample}~0.8, \code{colsample_bytree}~0.8, early
+        stopping on validation RMSE. Trained on the full
+        5.96\,M-row train fold in 13.3\,s.
+  \item \textbf{ML-MLP} (\code{code/06_ml_reweight.py}).
+        \code{sklearn.neural_network.MLPRegressor} with
+        hidden layers (128, 64), ReLU, light L2 regularisation, Adam
+        optimiser, batch~16384, \code{max_iter}~25 with
+        early stopping (\code{n_iter_no_change}~5,
+        \code{validation_fraction}~0.1). Trained on a random
+        250\,k-row sub-sample of the train fold (seed 20260501) in
+        5.9\,s; sub-sampling was needed because the initial PyTorch
+        CPU implementation was not converging in tractable time on the
+        target hardware.
+  \item \textbf{GNN} (\code{code/07_gnn_gene_network.py}).
+        Canonical: 2-layer GraphSAGE on a STRING~v12 high-confidence
+        gene graph. Fallback: 3-iteration Laplacian smoothing on the
+        same graph. The Gencode~v44 gene BED, SFARI catalogue, and
+        STRING edge file were not present locally, so no SNP could be
+        mapped to a gene and the resulting weight file collapses to
+        the discovery-Z baseline. This is reported transparently as
+        \emph{GNN (no graph)} in Table~\ref{tab:eval}.
+\end{itemize}
+
+The 14-dimensional feature vector was assembled from the available
+inputs: discovery Z-score, absolute Z, INFO, and mean/max/count of
+absolute Z in a $\pm 500$\,kb window, plus
+zero-imputed placeholders for the seven annotation-derived features
+that require the Gencode, SFARI, STRING, GTEx, ENCODE, and
+phyloP100way reference files. This means the
+ML models effectively learned from seven non-trivial features (the
+discovery Z plus the LD-window summaries); the remaining seven were
+constant zero in this run.
+
+\subsection{Compute environment and reproducibility}
+
+The pipeline was executed on a 2024 MacBook Pro (Apple Silicon,
+macOS~24.4, 16\,GB RAM). The Python environment is a project-local
+\texttt{.venv} (Python~3.11) with \texttt{polars}~1.x,
+\texttt{numpy}~1.26, \texttt{scipy}~1.11, \texttt{scikit-learn}~1.4,
+\texttt{xgboost}~2.0, \texttt{matplotlib}~3.8, and \texttt{networkx}~3.2.
+Total wall-clock time for an end-to-end \texttt{make all} (after the
+two raw sumstats files are present) is under five minutes. Every
+intermediate artefact lives under \texttt{results/} so any single
+stage can be re-run in isolation. Random seeds are fixed at
+\texttt{20260501} for the MLP sub-sampling and at the library defaults
+for XGBoost.
+
+\subsection{Evaluation protocol}
+
+Every produced weight file is read by \code{code/08_evaluate.py},
+which turns each method's effect estimate back into a predicted
+Z-score (effect divided by the discovery standard error) and compares
+it to the held-out SPARK-only Z on chr~21--22. We report four
+metrics:
+\begin{itemize}[nosep,leftmargin=1.2em]
+  \item \textbf{Correlation} (Pearson $r$) between predicted and
+        observed SPARK-only Z, with bootstrapped 95\,\% confidence
+        intervals from resampling SNPs.
+  \item \textbf{Area under the ROC curve (AUC)} for classifying whether
+        the absolute SPARK-only Z exceeds 1.96 (a rough ``nominally
+        significant'' cut-off in the independent signal).
+  \item \textbf{Calibration slope:} regress observed Z on predicted Z;
+        a well-calibrated model is near~1.
+  \item \textbf{Variance explained:} one minus the ratio of residual to
+        total sum of squares (similar to $R^2$ on the test SNPs).
+\end{itemize}
+The same script also produces an INFO-stratified table
+(\texttt{eval\_strata.tsv}) which tests whether predictive accuracy
+holds inside the higher-confidence imputation tiers
+(INFO $> 0.95$, $0.85$--$0.95$, $0.70$--$0.85$).
+
+The biological-enrichment script
+(\code{code/09_enrichment.py}) maps the top-decile SNPs of every
+method to nearest-gene and runs one-sided Fisher's exact tests
+against the SFARI Gene catalogue, GO neuro-developmental terms, and
+KEGG synaptic pathways. Because the gene mapping was empty in this run
+(see Section~\ref{sec:hyperparams}), the enrichment table was emitted
+but contains only \texttt{missing-ref} placeholders; this is
+transparently reported in the discussion.

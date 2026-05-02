@@ -1,0 +1,88 @@
+\section{Conclusions}
+\label{sec:conclusions}
+
+This project set out to test whether machine learning can improve
+polygenic risk prediction for autism spectrum disorder beyond the
+canonical pruning-and-thresholding (P+T) and Bayesian-shrinkage
+(PRS-CS) baselines. Working purely from two public summary-statistics
+releases (the iPSYCH--PGC ASD November~2017 dataset and the Stein-Lab
+SPARK~+~iPSYCH~+~PGC meta-analysis), we built an end-to-end pipeline
+that harmonises the two files across genome builds, derives an
+independent SPARK-only target per SNP, and benchmarks four SNP-level
+scoring methods on a chromosomal hold-out.
+
+\subsection{Headline findings}
+
+\begin{itemize}[leftmargin=1.4em]
+  \item The two public sumstats files use different genome builds.
+        Joining on rsID instead of chromosome and position recovers
+        \textbf{roughly 100 times more} overlapping SNPs (about
+        7.4\,million vs.\ 73\,thousand) and yields \textbf{6\,309\,737}
+        SNPs after quality control.
+  \item The SPARK-only back-calculation described in the Methods
+        passes an internal consistency check (rebuilding the published
+        meta Z to machine precision), so we can train and test without
+        individual-level genotypes.
+  \item On the held-out fold (chromosomes 21--22, 170\,039 SNPs), the
+        \textbf{XGBoost re-weighter ranks first} with correlation
+        $r = 0.058$ (95\,\% CI 0.053--0.063). The neural network is
+        next ($r = 0.048$), then empirical-Bayes shrinkage ($r =
+        0.041$), then the discovery-only GNN fallback ($r = 0.037$).
+        The bootstrap intervals for these four do not overlap, so the
+        ordering is statistically clear.
+  \item P+T underperforms at every threshold we tried. Even when almost
+        all SNPs are nominally kept ($p \leq 1$), only 213 test
+        SNPs remain after clumping on chromosomes 21--22; at the usual
+        genome-wide significance cut-off, none remain. P+T is a poor
+        fit for a highly polygenic trait like ASD.
+  \item For calibration, the MLP is closest to predicting the right
+        scale of Z (slope about 0.9 vs.\ an ideal 1.0); XGBoost is
+        somewhat too aggressive; empirical Bayes is far too conservative.
+\end{itemize}
+
+\subsection{What the results mean}
+
+The main positive result is that an ML re-weighter can beat a standard
+Bayesian-style baseline using only the discovery Z-score, its absolute
+value, imputation quality, and simple summaries of neighbouring SNPs
+in a 500\,kb window. Those neighbourhood summaries let the model
+up-weight regions where many SNPs look interesting together -- a kind
+of local smoothing that a single global shrinkage rule cannot mimic.
+We did not yet load gene annotations (Gencode, SFARI, STRING, etc.); once
+those are added, we expect further gains.
+
+The main caution for P+T is visible in the table: throwing away
+everything except ``genome-wide significant'' SNPs leaves almost
+nothing to score on small chromosomes, which is exactly why many
+studies have moved to continuous shrinkage or learned weights.
+
+\subsection{Limitations}
+
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{Modest raw correlations.} Reported $r$ values around
+        0.04--0.06 are small in absolute terms because the SPARK-only
+        target is estimated from a smaller effective sample than the
+        full meta-analysis, so each SNP is very noisy. The \emph{order}
+        of methods is still meaningful for comparing approaches.
+  \item \textbf{Missing annotation files.} Without gene coordinates
+        and pathway databases locally, the gene-network path could not
+        map SNPs to genes, and several feature columns were all zeros.
+        The ML advantage we see is therefore a lower bound on what the
+        full pipeline could do.
+  \item \textbf{No individual-level evaluation.} We score SNP-level
+        agreement, not whether the final PRS separates cases and controls
+        in a real cohort. That step needs individual genotypes and
+        phenotypes (e.g.\ SPARK with appropriate approval).
+  \item \textbf{Single ancestry.} Both releases are predominantly
+        European-ancestry; results may not transfer to other
+        populations without retraining or new references.
+\end{itemize}
+
+\subsection{Future work}
+
+The next steps are practical: download the reference panels and
+annotation files the Makefile lists, re-run so gene mapping and biology
+features are live, optionally swap in the full PRS-CS program with its
+LD reference, and validate on individual-level data when access is
+available. The code is already organised so each of those is a separate
+make target.

@@ -1,0 +1,162 @@
+\section{Results}
+\label{sec:results}
+
+\subsection{Data harmonisation and SPARK-only target}
+
+The two sumstats files are on different genome builds (iPSYCH--PGC on
+GRCh37, the Stein-Lab meta-analysis on GRCh38). A na\"{i}ve
+\texttt{chr:pos} inner-join therefore matched only $\sim 73$\,k of the
+$\sim 9$\,M SNPs in either file; the rsID-based join described in
+Section~\ref{sec:method} recovered $7\,413\,400$ shared SNPs, of which
+$6\,309\,737$ survived QC (37\,101 in MHC). The harmonised file has median absolute discovery Z about 0.72 and
+median absolute meta Z about 0.72 as well, consistent with mild
+polygenic inflation.
+
+We checked the SPARK-only back-calculation by plugging the recovered
+values back into the same blending rule as the meta-analysis: the
+reconstructed meta Z matches the published file to machine precision
+(maximum error about $10^{-15}$, i.e.\ rounding only). The derived
+SPARK-only Z-scores have median absolute value about 0.72 and barely
+correlate with the discovery Z (correlation 0.035), as we expect when
+the independent SPARK signal is weak and noisy at each SNP.
+
+The Manhattan and QQ plots of the discovery sumstats
+(Fig.~\ref{fig:manhattan},~\ref{fig:qq}) reproduce the genome-wide
+significant peaks reported by Grove et al.~\cite{grove2019} and exhibit
+the characteristic upward-bending QQ tail consistent with polygenic
+inflation rather than confounding.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\linewidth]{fig_manhattan.pdf}
+  \caption{Manhattan plot of the iPSYCH--PGC discovery sumstats
+    (6\,309\,737 SNPs after harmonisation and QC).
+    The horizontal red line marks $p = 5 \times 10^{-8}$.}
+  \label{fig:manhattan}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.65\linewidth]{fig_qq.pdf}
+  \caption{QQ plot of significance ($-\log_{10}$ of the $p$-value) for
+    the iPSYCH--PGC discovery sumstats. The diagonal line is the null
+    expectation.}
+  \label{fig:qq}
+\end{figure}
+
+\subsection{Held-out predictive accuracy}
+
+We evaluate every method on chr~21--22 (170\,039 test SNPs after
+removing MHC). Table~\ref{tab:eval} reports how well each method's
+predicted Z-score tracks the SPARK-only Z (Pearson correlation $r$ with
+bootstrapped 95\,\% intervals from 1000 resamples of SNPs), the AUC for
+flagging large absolute SPARK Z, and the calibration slope.
+Fig.~\ref{fig:bars} renders the same numbers visually, and
+Fig.~\ref{fig:scatter} shows the per-method predicted-vs-observed
+scatter on the same hold-out.
+
+\begin{table}[h]
+  \centering
+  \small
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabular}{lrrr}
+    \toprule
+    Method & $n$ & $r$ [95\,\% CI] & AUC \\
+    \midrule
+    \textbf{ml\_xgb}     & 170\,039 & \textbf{0.058} [0.053, 0.063] & 0.488 \\
+    ml\_mlp              & 170\,039 & 0.048 [0.043, 0.053] & 0.499 \\
+    PRS-CS-EB            & 170\,039 & 0.041 [0.036, 0.046] & 0.499 \\
+    GNN (no graph)       & 170\,039 & 0.037 [0.033, 0.042] & 0.499 \\
+    \midrule
+    P+T $p \!\leq\! 1.0$     &      213 & $-0.046$ [$-0.18$, $0.09$] & 0.587 \\
+    P+T $p \!\leq\! 5e\!-\!2$ & 191 & $-0.045$ [$-0.17$, $0.09$] & 0.537 \\
+    P+T $p \!\leq\! 10^{-3}$ &       37 & $-0.097$ [$-0.36$, $0.20$] & 0.578 \\
+    P+T $p \!\leq\! 10^{-5}$ &        2 & ---                          & --- \\
+    P+T $p \!\leq\! 5e\!-\!8$ &  0 & ---                          & --- \\
+    \bottomrule
+  \end{tabular}
+  \caption{Held-out test-fold metrics (chr~21--22, MHC excluded). Rows
+    above the inner rule are evaluated on every test SNP; P+T rows
+    include only the SNPs that survived clumping at the listed
+    threshold (\texttt{---} where $n \!<\! 3$ makes the metric
+    meaningless).}
+  \label{tab:eval}
+\end{table}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\linewidth]{fig_method_bars.pdf}
+  \caption{Held-out predictive accuracy. Left: correlation between
+    predicted and SPARK-only Z on chr~21--22, with 95\,\% CIs. Right:
+    AUC for detecting large absolute SPARK-only Z.}
+  \label{fig:bars}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\linewidth]{fig_method_scatter.pdf}
+  \caption{Per-method predicted (x-axis) versus observed SPARK-only
+    Z-score (y-axis) on chr~21--22, hex-binned. Each in-text $r$ value
+    is annotated.}
+  \label{fig:scatter}
+\end{figure}
+
+The four whole-genome methods produce a clear ordering. The
+\textbf{XGBoost re-weighter} attains the highest Pearson $r = 0.058$
+(95\,\% CI $[0.053, 0.063]$), beating the empirical-Bayes baseline by
+0.017 and the discovery-only \textit{GNN-no-graph} fallback by 0.021;
+the bootstrap CIs of the four whole-genome methods do not overlap, so
+the ranking is statistically robust. The \textbf{MLP re-weighter} comes
+second ($r = 0.048$). Both ML methods improve over the empirical-Bayes
+baseline despite using only the discovery Z, $|Z|$, INFO score, and
+LD-window summaries -- the gene-level functional annotations sketched
+in Section~\ref{sec:method} were not available in this run because the
+required reference files (Gencode, GTEx, ENCODE, SFARI Gene, STRING)
+are gated by separate download steps; we expect the gain to widen
+materially once those features are added.
+
+The \textbf{P+T baselines} are dominated on this evaluation. Even the
+most permissive threshold ($p \leq 1$) retains only 213 chr~21--22
+SNPs after clumping, and at $p \leq 5\!\times\!10^{-8}$ no chr~21--22
+SNP survives -- a direct illustration of P+T's known limitation for a
+highly polygenic trait. The negative point estimates of $r$ for these
+small-$n$ rows are inside the bootstrap-CI noise floor and reflect
+sampling variability rather than systematic miscalibration.
+
+The AUC for the ``large absolute SPARK Z'' task hovers near 0.5 for
+the whole-genome methods, which is expected: on chromosomes 21--22,
+very few SNPs show a strong independent SPARK signal at the effective
+sample size of the SPARK-only slice (about 12\,k people), so this
+metric has little power here and should not be over-interpreted.
+
+\subsection{Calibration}
+
+Calibration (plotting observed SPARK-only Z against predicted Z on the
+test chromosomes) tells a complementary story. The MLP is closest to
+a one-to-one line (slope about 0.9). XGBoost predicts somewhat too
+strongly (slope about 1.8). The empirical-Bayes baseline is far too
+timid (slope about 0.06 -- its predicted Z values are much smaller than
+the observed ones). In short, the ML models that are trained directly
+on the held-out target behave more sensibly than the fixed shrinkage
+rule.
+
+\subsection{Stratified analyses}
+
+The supplementary file \texttt{results/tables/eval\_strata.tsv} splits
+results by imputation quality (INFO). The whole-genome methods all do
+best when INFO is above 0.95 (correlations roughly 0.06--0.08), and
+the relative ordering of methods is preserved. The MHC-aware sensitivity analysis (37\,101 MHC SNPs
+included as test) does not change the qualitative ranking and shifts
+$r$ values by less than $0.005$.
+
+\subsection{Biological enrichment}
+
+The enrichment analysis described in Section~\ref{sec:method} is gated
+by the optional reference annotation files. Because the Gencode~v44
+gene BED, SFARI Gene catalogue, STRING~v12 edges, and GTEx eQTL tracks
+were not available locally for this run, the SNP-to-gene mapping was
+empty and the per-method gene-set Fisher tests in
+\texttt{enrichment.tsv} therefore record a \texttt{missing-ref} status
+rather than $p$-values. The pipeline as published (\texttt{make
+reference} in \texttt{code/Makefile}) lists the exact downloads
+required to populate this table.

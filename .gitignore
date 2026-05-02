@@ -20,24 +20,27 @@ results/qc/*.parquet
 *.tmp
 *.bak
 
-# Raw datasets are kept locally only; uncomment to ignore
-# Datasets/iPSYCH-PGC_ASD/*.gz
-# Datasets/ASD_SPARK_iPSYCH_PGC/*.tsv
+# Raw datasets are large; keep locally only (see README Data section)
+Datasets/iPSYCH-PGC_ASD/*.gz
+Datasets/ASD_SPARK_iPSYCH_PGC/*.tsv
 
 # LaTeX build artefacts
-paper/*.aux
-paper/*.bbl
-paper/*.bcf
-paper/*.blg
-paper/*.fdb_latexmk
-paper/*.fls
-paper/*.log
-paper/*.out
-paper/*.run.xml
-paper/*.synctex.gz
-paper/*.toc
-paper/main.pdf
-paper/sections/*.aux
+report/*.aux
+report/*.bbl
+report/*.bcf
+report/*.blg
+report/*.fdb_latexmk
+report/*.fls
+report/*.log
+report/*.out
+report/*.run.xml
+report/*.synctex.gz
+report/*.toc
+report/sections/*.aux
+
+# The compiled report and the original proposal are deliverables; track them.
+!report.pdf
+!proposal.pdf
 
 # Editor
 .vscode/

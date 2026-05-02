@@ -1,0 +1,61 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{microtype}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{caption}
+\PassOptionsToPackage{hyphens}{url}
+\usepackage{xurl}
+\usepackage[dvipsnames]{xcolor}
+\usepackage[colorlinks=true,linkcolor=blue!50!black,citecolor=blue!50!black,urlcolor=blue!50!black]{hyperref}
+
+% \code{...} = a typewriter span that may break at /, _, ., -
+\providecommand{\code}[1]{\nolinkurl{#1}}
+\usepackage{authblk}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{parskip}
+
+\titleformat{\section}{\Large\bfseries}{\thesection}{0.7em}{}
+\titleformat{\subsection}{\large\bfseries}{\thesubsection}{0.6em}{}
+
+\graphicspath{{figures/}}
+
+\title{Improving Autism Risk Prediction from GWAS Summary Statistics
+       Using Machine Learning--Enhanced Polygenic Scoring \\[0.3em]
+       \large Project Report}
+
+\author[1]{L.~T.~D.~B.~Fernando~(258222U)}
+\author[1]{M.~D.~C.~J.~Gunatillake~(239318J)}
+\author[1]{K.~P.~D.~P.~Lakshan~(258251G)}
+\affil[1]{University of Moratuwa}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\input{sections/01_intro.tex}
+\input{sections/02_litreview.tex}
+\input{sections/03_method.tex}
+\input{sections/04_experiments.tex}
+\input{sections/05_results.tex}
+\input{sections/06_conclusions.tex}
+
+\section*{Code and Data Availability}
+The full pipeline is provided as supplementary material under the
+project's \texttt{code/} directory; figures and tables under
+\texttt{results/}. The two summary-statistics inputs are public: the
+iPSYCH--PGC ASD November 2017 release is available from the PGC
+website~\cite{grove2019}, and the SPARK + iPSYCH + PGC meta-analysis
+sumstats from the Stein-Lab repository~\cite{matoba2020}. No
+individual-level data are required to reproduce any number reported here.
+
+\bibliographystyle{plainurl}
+\bibliography{references}
+
+\end{document}

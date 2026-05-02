@@ -18,7 +18,7 @@ help:
 	@echo "  make gnn        - 07: gene-network GNN reweighter"
 	@echo "  make evaluate   - 08: per-method evaluation tables"
 	@echo "  make enrichment - 09: SFARI / GO / KEGG enrichment"
-	@echo "  make figures    - 10: paper figures"
+	@echo "  make figures    - 10: report figures"
 	@echo "  make all        - run the whole pipeline 01..10"
 	@echo "  make reference  - download reference panels (multi-GB; requires net)"
 	@echo "  make clean      - remove generated outputs"
@@ -65,7 +65,7 @@ $(FIGS)/fig_method_bars.pdf: $(TABLES)/eval.tsv
 
 reference:
 	@echo "Reference downloads must be run interactively because of size and DUAs."
-	@echo "Recommended manual steps (see paper/Methods):"
+	@echo "Recommended manual steps (see report/Method):"
 	@echo "  1) PRS-CS:        git clone https://github.com/getian107/PRScs $(REF)/PRScs"
 	@echo "  2) PRS-CS LD ref: download ldblk_1kg_eur from PRS-CS into $(REF)/ldblk_1kg_eur"
 	@echo "  3) 1000G EUR PLINK files: see https://www.cog-genomics.org/plink/1.9/resources"

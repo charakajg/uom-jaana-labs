@@ -43,7 +43,7 @@ Provenance: <https://bitbucket.org/steinlabunc/spark_asd_sumstats>.
 
 ## How they relate
 
-The Stein-Lab meta-analysis **includes** the iPSYCH-PGC samples by construction. To obtain an independent SPARK-only signal we invert the sample-size-weighted-Z meta formula in [`code/02_derive_spark_only.py`](../code/02_derive_spark_only.py); see that script and the paper Methods section for the derivation.
+The Stein-Lab meta-analysis **includes** the iPSYCH-PGC samples by construction. To obtain an independent SPARK-only signal we invert the sample-size-weighted-Z meta formula in [`code/02_derive_spark_only.py`](../code/02_derive_spark_only.py); see that script and the report Method section for the derivation.
 
 ## md5
 

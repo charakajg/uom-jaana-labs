@@ -1,0 +1,167 @@
+\section{Literature Review}
+\label{sec:litreview}
+
+\subsection{Identification of Common Genetic Risk Variants for Autism Spectrum Disorder}
+
+Grove et al.\ (2019)~\cite{grove2019}, published in \textit{Nature
+Genetics}, represents the largest genetic study of autism using common
+variants to date. By combining data from over 46\,000 individuals, the
+study confirmed that common genetic variants collectively play a
+meaningful role in autism risk and identified specific regions of the
+genome where this risk is concentrated. However, when these findings
+were used to build a prediction tool, it explained only 2.5\,\% of why
+some people develop autism and others do not, despite the enormous
+sample size. The authors concluded that better prediction would require
+fundamentally different approaches rather than simply collecting more
+data, leaving a clear methodological gap that subsequent work has yet
+to fill.
+
+\subsection{Large-Scale Exome Sequencing Study Implicates Both Developmental and Functional Changes in the Neurobiology of Autism}
+
+Satterstrom et al.\ (2020)~\cite{satterstrom2020}, published in
+\textit{Cell}, offers an important clue as to what those different
+approaches might target. By examining rare mutations in 35\,584
+individuals, the study identified 102 genes with strong links to
+autism. These genes were not randomly distributed across biology but
+clustered around two specific functions: controlling brain development
+before birth and managing communication between neurons. More
+importantly, these same genes overlapped with the regions flagged by
+common variant studies like Grove et al., suggesting that different
+types of genetic risk ultimately disrupt the same underlying
+biological systems. Autism risk appears to funnel through a connected
+set of biological pathways rather than arising from isolated genetic
+effects acting independently, which points toward gene interaction
+modelling as a more biologically grounded basis for prediction than
+current additive methods provide.
+
+\subsection{Understanding the Genetic Contribution to ASD}
+
+Havdahl et al.\ (2021)~\cite{havdahl2021} review synthesises the
+current understanding of ASD's genetic architecture, emphasising that
+risk arises from two distinct sources. Rare \textit{de novo} mutations
+in constrained genes like \textit{CHD8} and \textit{SCN2A} confer large
+individual effects but collectively explain fewer than 5\,\% of
+cases. Common inherited variants each have tiny effects, and despite
+large GWAS efforts, only a handful of loci have been robustly
+identified. SNP-based heritability estimates range widely from 12\,\%
+to 65\,\%, far below the 80\,\% from twin studies. The authors argue
+that closing this gap requires integrating common and rare variant
+data alongside multi-omics approaches, as standard additive models are
+insufficient to capture the full genetic liability. This directly
+motivates the need for models that go beyond simple summation of
+variant effects and instead account for how genes relate to and
+interact with one another.
+
+\subsection{Single Nucleotide Polymorphisms Predict Symptom Severity of Autism Spectrum Disorder}
+
+Jiao et al.\ (2012)~\cite{jiao2012} investigated whether the genetic
+profile of a child with autism, specifically their pattern of SNPs
+across a set of known autism-related genes, can predict how severe
+their symptoms will be. Working with 118 children already diagnosed
+with ASD, the researchers used a standard clinical severity scale
+called the Childhood Autism Rating Scale (CARS) to divide participants
+into two groups: those with mild to moderate autism and those with
+severe autism. For each child, 29 SNPs spanning 9 genes previously
+linked to ASD were collected and fed into three machine learning models
+-- decision stumps, alternating decision trees, and FlexTrees -- to
+see whether genetic data alone could correctly classify symptom
+severity. The best-performing models achieved an overall accuracy of
+67\,\%, with a sensitivity of 0.88, meaning they were reasonably good
+at identifying the more severely affected children. Across all three
+models, one SNP consistently emerged as the most important predictor:
+rs878960, located in a gene called \textit{GABRB3}, which plays a role
+in how the brain regulates key chemical signals between neurons.
+Children carrying certain versions of this SNP tended to score higher
+on the autism severity scale, suggesting a genuine biological link
+between this genetic variant and the intensity of autistic
+symptoms. This paper is significant for our work for two reasons.
+First, it provides direct evidence that SNP-level genetic data carries
+real predictive signal about autism --- not just who develops the
+condition, but how it manifests --- which directly supports the
+premise of our project. Second, it honestly reveals the limitations of
+a small, focused approach: only 118 children, only 29 SNPs from
+pre-selected genes, and modest accuracy. Our research aims to extend
+this logic to a genome-wide scale, using thousands of SNPs and more
+powerful machine learning methods to substantially improve on what
+this foundational study was able to achieve.
+
+\subsection{Interactions of Genetic Risks for Autism and the Broad Autism Phenotypes}
+
+Dong et al.\ (2023)~\cite{dong2023} takes a bioinformatics pipeline
+approach to combining SNP-level GWAS data with machine
+learning-informed polygenic risk scoring, making it highly relevant to
+the kind of work our team is pursuing. The researchers worked with
+genome-wide SNP data from nearly 10\,000 individuals including over
+2\,400 autism cases and their unaffected siblings, computing polygenic
+risk scores using a Bayesian method called PRS-CS that estimates the
+effect of each SNP while accounting for correlations between nearby
+variants. GWAS summary statistics from a study involving over 18\,000
+cases and 27\,000 controls were combined with the European 1000
+Genomes reference panel to estimate posterior effect sizes, generating
+polygenic scores across 3\,659\,780 SNPs for nearly 10\,000
+individuals. What makes this paper particularly valuable is that it
+goes beyond simply computing a risk score and instead investigates how
+that SNP-derived genetic risk interacts with other factors,
+specifically rare \textit{de novo} mutations, to shape autism outcomes
+and related behavioural traits across the spectrum. The study found
+that common SNP-based polygenic risk and rare mutations contribute to
+autism risk through overlapping but distinct pathways, and that their
+combined effect is greater than either alone. For our project, this
+paper serves as a strong example of how a well-designed bioinformatics
+pipeline that properly handles the full SNP dataset rather than only
+keeping a few significant variants can reveal biological relationships
+that simpler approaches would completely miss.
+
+\subsection{Problem Statement}
+
+Genome-Wide Association Studies (GWAS) have served as the primary
+scientific tool for uncovering the genetic foundations of Autism
+Spectrum Disorder. By scanning the genomes of thousands of
+individuals, some diagnosed with ASD and others without, researchers
+can identify specific positions in the DNA, known as single nucleotide
+polymorphisms or SNPs, where particular genetic variants appear more
+frequently among those with autism. This method has illuminated a
+number of genomic regions influencing the neurobiological processes
+underlying ASD, offering meaningful, if incomplete, biological insight.
+
+To translate these findings into something clinically actionable,
+researchers developed the Polygenic Risk Score, or PRS, a tool that
+combines the weighted contributions of many SNPs into a single number
+representing an individual's genetic predisposition to ASD. In
+principle, this is precisely the right direction, because autism risk
+is not driven by any single variant but by the collective, cumulative
+influence of potentially hundreds or thousands of SNPs acting together
+across the genome. The critical problem, however, is that the majority
+of existing bioinformatics research on ASD risk has not meaningfully
+embraced this multi-SNP reality. Most studies either focus on
+identifying individual SNPs of statistical significance, examine small
+pre-selected sets of variants from a handful of candidate genes, or
+apply machine learning to narrow genetic features rather than to the
+full breadth of genome-wide SNP data. The rich, distributed signal
+embedded across the entire SNP landscape therefore remains largely
+unexploited.
+
+The standard construction method known as pruning and thresholding
+compounds this problem further by actively discarding the majority of
+SNPs that do not individually clear a stringent significance
+threshold. For a highly polygenic condition like ASD, where risk
+emerges from the combined effect of potentially thousands of
+small-effect variants, this means eliminating most of the true genetic
+signal before any modelling even begins. Studies such as Jiao et al.\
+(2012)~\cite{jiao2012}, while demonstrating that SNP patterns carry
+genuine predictive information about autism, worked with only 29 SNPs
+from 9 pre-selected genes, leaving the question of what a genuinely
+genome-wide multi-SNP approach could achieve entirely unanswered. More
+recent polygenic scoring work has moved closer to this goal but
+continues to rely on additive linear frameworks that treat each SNP as
+independent, ignoring the biological relationships between variants
+that likely account for a substantial share of unexplained heritability.
+
+There is therefore a clear and unresolved gap in the existing
+literature: no bioinformatics approach for ASD has yet constructed a
+risk prediction model that simultaneously incorporates the full
+multi-SNP signal from genome-wide summary statistics, applies machine
+learning to intelligently select and weight across that complete SNP
+space, and produces a validated risk score with demonstrably superior
+discriminatory accuracy. This is the precise gap the proposed research
+sets out to address.

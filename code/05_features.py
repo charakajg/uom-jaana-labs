@@ -23,7 +23,7 @@ Features per SNP
 
 When optional reference annotations are missing the corresponding column is
 filled with a sentinel value (``-1`` for distances, ``0.0`` for scores) so
-that the downstream ML models still run; the paper's headline numbers
+that the downstream ML models still run; the report's headline numbers
 require the full annotation set fetched by ``make reference``.
 
 Reads
